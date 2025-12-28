@@ -10,6 +10,7 @@ package com.example.controlejardim.data
  * @property isConnected Whether the app is connected to the MQTT broker
  * @property currentDay Current day of incubation (days since start)
  * @property daysRemaining Days remaining until hatching
+ * @property incubationState Current state of the incubation process
  */
 data class IncubatorData(
     val temperature: Float = 0f,
@@ -18,7 +19,8 @@ data class IncubatorData(
     val isHumidifierOn: Boolean = false,
     val isConnected: Boolean = false,
     val currentDay: Int = 0,
-    val daysRemaining: Int = 0
+    val daysRemaining: Int = 0,
+    val incubationState: IncubationState = IncubationState.NOT_STARTED
 ) {
     companion object {
         // Ideal incubation parameters for chicken eggs
@@ -62,6 +64,12 @@ data class IncubatorData(
             humidity <= HUMIDITY_CRITICAL_HIGH -> HumidityStatus.HIGH
             else -> HumidityStatus.CRITICAL_HIGH
         }
+}
+
+enum class IncubationState {
+    NOT_STARTED,
+    RUNNING,
+    COMPLETED
 }
 
 enum class TemperatureStatus {

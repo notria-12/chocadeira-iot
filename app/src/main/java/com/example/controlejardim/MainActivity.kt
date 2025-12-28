@@ -8,8 +8,10 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.example.controlejardim.data.IncubationState
 import com.example.controlejardim.data.IncubatorData
 import com.example.controlejardim.ui.screens.IncubatorScreen
+import com.example.controlejardim.ui.screens.SetupScreen
 import com.example.controlejardim.ui.theme.ControleJardimTheme
 import com.hivemq.client.mqtt.datatypes.MqttQos
 import com.hivemq.client.mqtt.mqtt3.Mqtt3BlockingClient
@@ -21,7 +23,8 @@ class MainActivity : ComponentActivity() {
 
     private var client: Mqtt3BlockingClient? = null
     private val brokerHost = "mqtt-dashboard.com"
-    private val topic = "projeto_chocadeira/dados"
+    private val topicData = "projeto_chocadeira/dados"
+    private val topicCommand = "projeto_chocadeira/comando"
 
     // State for Compose UI
     private var incubatorData by mutableStateOf(IncubatorData())
@@ -32,7 +35,20 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             ControleJardimTheme {
-                IncubatorScreen(incubatorData = incubatorData)
+                when (incubatorData.incubationState) {
+                    IncubationState.NOT_STARTED -> {
+                        SetupScreen(
+                            isConnected = incubatorData.isConnected,
+                            onStartIncubation = { days ->
+                                startIncubation(days)
+                            }
+                        )
+                    }
+                    IncubationState.RUNNING,
+                    IncubationState.COMPLETED -> {
+                        IncubatorScreen(incubatorData = incubatorData)
+                    }
+                }
             }
         }
 
@@ -60,9 +76,9 @@ class MainActivity : ComponentActivity() {
                 incubatorData = incubatorData.copy(isConnected = true)
             }
 
-            // Subscribe to topic and listen for messages
+            // Subscribe to data topic and listen for messages
             client?.toAsync()?.subscribeWith()
-                ?.topicFilter(topic)
+                ?.topicFilter(topicData)
                 ?.qos(MqttQos.AT_LEAST_ONCE)
                 ?.callback { publish ->
                     val payload = StandardCharsets.UTF_8.decode(publish.payload.get()).toString()
@@ -77,6 +93,37 @@ class MainActivity : ComponentActivity() {
                 incubatorData = incubatorData.copy(isConnected = false)
             }
         }
+    }
+
+    private fun startIncubation(days: Int) {
+        Thread {
+            try {
+                val command = JSONObject().apply {
+                    put("status", "STARTED")
+                    put("dias_eclosao", days)
+                }
+
+                client?.publishWith()
+                    ?.topic(topicCommand)
+                    ?.qos(MqttQos.AT_LEAST_ONCE)
+                    ?.payload(command.toString().toByteArray(StandardCharsets.UTF_8))
+                    ?.send()
+
+                Log.d("MQTT", "Command sent: ${command.toString()}")
+
+                // Update UI state to show monitoring screen
+                runOnUiThread {
+                    incubatorData = incubatorData.copy(
+                        incubationState = IncubationState.RUNNING,
+                        daysRemaining = days,
+                        currentDay = 1
+                    )
+                }
+
+            } catch (e: Exception) {
+                Log.e("MQTT", "Error sending command: ${e.message}")
+            }
+        }.start()
     }
 
     private fun updateData(jsonString: String) {
@@ -95,6 +142,13 @@ class MainActivity : ComponentActivity() {
             val currentDay = jsonObject.optInt("dia", 0)
             val daysRemaining = jsonObject.optInt("resta", 0)
 
+            // If we receive data with dia > 0, incubation is running
+            val newState = if (currentDay > 0 || daysRemaining > 0) {
+                IncubationState.RUNNING
+            } else {
+                incubatorData.incubationState
+            }
+
             incubatorData = incubatorData.copy(
                 temperature = temperature,
                 humidity = humidity,
@@ -102,6 +156,7 @@ class MainActivity : ComponentActivity() {
                 isHumidifierOn = isHumidifierOn,
                 currentDay = currentDay,
                 daysRemaining = daysRemaining,
+                incubationState = newState,
                 isConnected = true
             )
 
