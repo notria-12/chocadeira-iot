@@ -4,6 +4,7 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -36,6 +38,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -127,6 +130,175 @@ fun DataCard(
                 }
             }
         }
+    }
+}
+
+@Composable
+fun IncubationProgressCard(
+    currentDay: Int,
+    daysRemaining: Int,
+    progress: Float,
+    modifier: Modifier = Modifier
+) {
+    val animatedProgress by animateFloatAsState(
+        targetValue = progress.coerceIn(0f, 1f),
+        animationSpec = tween(1000, easing = FastOutSlowInEasing),
+        label = "progress"
+    )
+
+    val progressGradient = listOf(
+        Color(0xFFFF9800),
+        Color(0xFFFFC107),
+        Color(0xFF8BC34A)
+    )
+
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .shadow(
+                elevation = 12.dp,
+                shape = RoundedCornerShape(24.dp),
+                spotColor = Color(0xFFFFC107).copy(alpha = 0.3f)
+            ),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    brush = Brush.linearGradient(
+                        colors = listOf(
+                            Color(0xFFFFF8E1).copy(alpha = 0.5f),
+                            Color(0xFFFFECB3).copy(alpha = 0.3f)
+                        )
+                    )
+                )
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp)
+            ) {
+                // Header with egg icon
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "🥚 Progresso da Incubação",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "${(animatedProgress * 100).toInt()}%",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFFF9800)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                // Progress bar
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(12.dp)
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(animatedProgress)
+                            .fillMaxHeight()
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(
+                                brush = Brush.horizontalGradient(progressGradient)
+                            )
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                // Days info
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    DayInfoItem(
+                        value = currentDay.toString(),
+                        label = "Dia Atual",
+                        icon = "📅",
+                        color = Color(0xFF2196F3)
+                    )
+                    
+                    // Divider
+                    Box(
+                        modifier = Modifier
+                            .width(1.dp)
+                            .height(50.dp)
+                            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
+                    )
+                    
+                    DayInfoItem(
+                        value = daysRemaining.toString(),
+                        label = "Dias Restantes",
+                        icon = "⏳",
+                        color = Color(0xFFFF9800)
+                    )
+                    
+                    // Divider
+                    Box(
+                        modifier = Modifier
+                            .width(1.dp)
+                            .height(50.dp)
+                            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
+                    )
+                    
+                    DayInfoItem(
+                        value = (currentDay + daysRemaining).toString(),
+                        label = "Total",
+                        icon = "🐣",
+                        color = Color(0xFF4CAF50)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DayInfoItem(
+    value: String,
+    label: String,
+    icon: String,
+    color: Color
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = icon,
+            fontSize = 20.sp
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = value,
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            color = color
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+            textAlign = TextAlign.Center
+        )
     }
 }
 
@@ -256,11 +428,10 @@ fun ConnectionStatusBar(
         contentAlignment = Alignment.Center
     ) {
         Text(
-            text = if (isConnected) "● Conectado ao broker MQTT" else "○ Desconectado",
+            text = if (isConnected) "● Conectado a Chocadeira" else "○ Desconectado",
             style = MaterialTheme.typography.labelMedium,
             color = Color.White,
             fontWeight = FontWeight.Medium
         )
     }
 }
-

@@ -8,13 +8,17 @@ package com.example.controlejardim.data
  * @property isHeaterOn Whether the heater is currently active
  * @property isHumidifierOn Whether the humidifier is currently active
  * @property isConnected Whether the app is connected to the MQTT broker
+ * @property currentDay Current day of incubation (days since start)
+ * @property daysRemaining Days remaining until hatching
  */
 data class IncubatorData(
     val temperature: Float = 0f,
     val humidity: Float = 0f,
     val isHeaterOn: Boolean = false,
     val isHumidifierOn: Boolean = false,
-    val isConnected: Boolean = false
+    val isConnected: Boolean = false,
+    val currentDay: Int = 0,
+    val daysRemaining: Int = 0
 ) {
     companion object {
         // Ideal incubation parameters for chicken eggs
@@ -28,7 +32,18 @@ data class IncubatorData(
         const val TEMP_CRITICAL_HIGH = 40f
         const val HUMIDITY_CRITICAL_LOW = 40f
         const val HUMIDITY_CRITICAL_HIGH = 80f
+
+        // Total incubation period for chicken eggs (typically 21 days)
+        const val TOTAL_INCUBATION_DAYS = 21
     }
+
+    /** Total days of incubation cycle */
+    val totalDays: Int
+        get() = currentDay + daysRemaining
+
+    /** Progress percentage (0.0 to 1.0) */
+    val progress: Float
+        get() = if (totalDays > 0) currentDay.toFloat() / totalDays.toFloat() else 0f
 
     val temperatureStatus: TemperatureStatus
         get() = when {
@@ -64,4 +79,3 @@ enum class HumidityStatus {
     HIGH,
     CRITICAL_HIGH
 }
-

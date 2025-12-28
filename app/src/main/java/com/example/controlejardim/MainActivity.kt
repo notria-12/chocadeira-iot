@@ -83,24 +83,29 @@ class MainActivity : ComponentActivity() {
         try {
             val jsonObject = JSONObject(jsonString)
 
+            // Parse sensor data
             val temperature = jsonObject.optDouble("temp", 0.0).toFloat()
             val humidity = jsonObject.optDouble("humi", 0.0).toFloat()
 
-            // Determine heater and humidifier status based on values
-            // Heater: turns on when temp is below ideal (37.5°C)
-            // Humidifier: turns on when humidity is below ideal (55%)
-            val isHeaterOn = temperature < IncubatorData.IDEAL_TEMP_MIN
-            val isHumidifierOn = humidity < IncubatorData.IDEAL_HUMIDITY_MIN
+            // Parse device states from payload (0 = off, 1 = on)
+            val isHeaterOn = jsonObject.optInt("aq", 0) == 1
+            val isHumidifierOn = jsonObject.optInt("um", 0) == 1
+
+            // Parse incubation progress
+            val currentDay = jsonObject.optInt("dia", 0)
+            val daysRemaining = jsonObject.optInt("resta", 0)
 
             incubatorData = incubatorData.copy(
                 temperature = temperature,
                 humidity = humidity,
                 isHeaterOn = isHeaterOn,
                 isHumidifierOn = isHumidifierOn,
+                currentDay = currentDay,
+                daysRemaining = daysRemaining,
                 isConnected = true
             )
 
-            Log.d("MQTT", "Data updated - Temp: $temperature°C, Humidity: $humidity%")
+            Log.d("MQTT", "Data updated - Temp: ${temperature}°C, Humidity: ${humidity}%, Day: $currentDay, Remaining: $daysRemaining")
 
         } catch (e: Exception) {
             Log.e("App", "JSON parse error: ${e.message}")

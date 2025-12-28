@@ -9,11 +9,16 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -41,13 +46,12 @@ import androidx.compose.ui.unit.dp
 import com.example.controlejardim.data.IncubatorData
 import com.example.controlejardim.ui.components.ConnectionStatusBar
 import com.example.controlejardim.ui.components.DataCard
+import com.example.controlejardim.ui.components.IncubationProgressCard
 import com.example.controlejardim.ui.components.StatusIndicatorCard
 import com.example.controlejardim.ui.theme.HeaterOff
 import com.example.controlejardim.ui.theme.HeaterOn
 import com.example.controlejardim.ui.theme.HumidifierOff
 import com.example.controlejardim.ui.theme.HumidifierOn
-import com.example.controlejardim.ui.theme.HumidityOk
-import com.example.controlejardim.ui.theme.TemperatureWarm
 import kotlinx.coroutines.delay
 
 @Composable
@@ -77,14 +81,25 @@ fun IncubatorScreen(
         Column(
             modifier = Modifier.fillMaxSize()
         ) {
-            // Connection status bar
-            ConnectionStatusBar(isConnected = incubatorData.isConnected)
+            // Connection status bar with top safe area padding
+            ConnectionStatusBar(
+                isConnected = incubatorData.isConnected,
+                modifier = Modifier.padding(
+                    top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+                )
+            )
 
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 20.dp, vertical = 16.dp),
+                    .padding(horizontal = 20.dp)
+                    .padding(top = 16.dp)
+                    .padding(
+                        bottom = WindowInsets.navigationBars
+                            .asPaddingValues()
+                            .calculateBottomPadding() + 16.dp
+                    ),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 // Header
@@ -120,6 +135,18 @@ fun IncubatorScreen(
                             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
                         )
                     }
+                }
+
+                // Incubation Progress Card
+                AnimatedVisibility(
+                    visible = isVisible,
+                    enter = fadeIn() + slideInVertically { 40 }
+                ) {
+                    IncubationProgressCard(
+                        currentDay = incubatorData.currentDay,
+                        daysRemaining = incubatorData.daysRemaining,
+                        progress = incubatorData.progress
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -245,7 +272,7 @@ fun IncubatorScreen(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(16.dp))
             }
         }
     }
@@ -272,4 +299,3 @@ private fun getHumidityColor(humidity: Float): Color {
         else -> Color(0xFF5C6BC0)                   // Too high - Indigo
     }
 }
-
